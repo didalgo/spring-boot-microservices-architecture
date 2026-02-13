@@ -1,0 +1,17 @@
+# This file ensures the directory structure is tracked by Git
+# Git doesn't track empty directories, so we use .gitkeep as a convention
+
+# This directory will contain:
+# - Common utilities and helpers
+# - Base Spring configurations
+# - Shared exception handlers
+# - Constants and enums used across services
+
+# Example future structure:
+# com/idalgo/daniel/common/
+#   config/
+#     BaseSecurityConfig.java
+#   exception/
+#     GlobalExceptionHandler.java
+#   util/
+#     DateUtils.java

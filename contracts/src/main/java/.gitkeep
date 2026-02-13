@@ -1,0 +1,16 @@
+# This file ensures the directory structure is tracked by Git
+# Git doesn't track empty directories, so we use .gitkeep as a convention
+
+# This directory will contain:
+# - Shared DTOs (Data Transfer Objects)
+# - Request/Response objects
+# - API contract definitions
+
+# Example future structure:
+# com/idalgo/daniel/contracts/
+#   order/
+#     OrderRequest.java
+#     OrderResponse.java
+#   payment/
+#     PaymentRequest.java
+#     PaymentResponse.java
