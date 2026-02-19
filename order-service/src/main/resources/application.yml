@@ -1,0 +1,20 @@
+spring:
+  application:
+    n: order-service
+
+server:
+  port: 8081
+
+# Order Service specific configuration
+order-service:
+  max-orders-per-customer: 100
+  order-prefix: "ORD"
+  enable-notifications: false
+
+# Logging configuration
+logging:
+  level:
+    root: INFO
+    com.idalgo.daniel.orderservice: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
