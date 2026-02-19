@@ -1,0 +1,15 @@
+spring:
+  application:
+    n: order-service-test
+
+# Test-specific configuration
+order-service:
+  max-orders-per-customer: 50
+  order-prefix: "TEST"
+  enable-notifications: false
+
+# Disable unnecessary logging in tests
+logging:
+  level:
+    root: WARN
+    com.idalgo.daniel.orderservice: INFO
