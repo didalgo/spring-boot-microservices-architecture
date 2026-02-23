@@ -7,7 +7,7 @@
 
     <groupId>com.idalgo.daniel</groupId>
     <artifactId>spring-boot-microservices-architecture</artifactId>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
     <packaging>pom</packaging>
 
     <name>Spring Boot Microservices Architecture</name>
@@ -20,6 +20,7 @@
         <module>contracts</module>
         <module>common</module>
         <module>order-service</module>
+        <module>payment-service</module>
     </modules>
 
     <properties>

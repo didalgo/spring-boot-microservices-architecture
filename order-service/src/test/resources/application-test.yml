@@ -1,6 +1,6 @@
 spring:
   application:
-    n: order-service-test
+    name: order-service-test
 
 # Test-specific configuration
 order-service:
