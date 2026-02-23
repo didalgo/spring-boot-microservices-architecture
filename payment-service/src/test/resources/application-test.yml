@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: payment-service-test
+
+payment-service:
+  payment-prefix: "TEST-PAY"
+  enable-fraud-detection: false
+  max-refund-days: 15
+
+logging:
+  level:
+    root: WARN
+    com.idalgo.daniel.paymentservice: INFO
+    com.idalgo.daniel.common: INFO

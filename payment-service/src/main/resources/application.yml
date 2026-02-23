@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: payment-service
+
+server:
+  port: 8082
+
+# Payment Service specific configuration
+payment-service:
+  payment-prefix: "PAY"
+  enable-fraud-detection: false
+  max-refund-days: 30
+
+# Logging configuration
+logging:
+  level:
+    root: INFO
+    com.idalgo.daniel.paymentservice: DEBUG
+    com.idalgo.daniel.common: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

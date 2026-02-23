@@ -8,7 +8,7 @@
     <parent>
         <groupId>com.idalgo.daniel</groupId>
         <artifactId>spring-boot-microservices-architecture</artifactId>
-        <version>0.2.0</version>
+        <version>0.3.0</version>
     </parent>
 
     <artifactId>order-service</artifactId>
@@ -21,6 +21,12 @@
     </description>
 
     <dependencies>
+        <!-- Project Modules - UPDATED: Added common for GlobalExceptionHandler -->
+        <dependency>
+            <groupId>com.idalgo.daniel</groupId>
+            <artifactId>common</artifactId>
+        </dependency>
+
         <!-- Spring Boot Web Starter (REST API support) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

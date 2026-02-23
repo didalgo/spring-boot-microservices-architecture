@@ -1,6 +1,6 @@
 spring:
   application:
-    n: order-service
+    name: order-service
 
 server:
   port: 8081
