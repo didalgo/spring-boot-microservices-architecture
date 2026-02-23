@@ -18,3 +18,7 @@ logging:
     com.idalgo.daniel.orderservice: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Payment Service Configuration
+payment-service:
+  url: http://localhost:8082

@@ -4,6 +4,13 @@ import com.idalgo.daniel.orderservice.config.OrderServiceConfig;
 import com.idalgo.daniel.orderservice.dto.CreateOrderRequest;
 import com.idalgo.daniel.orderservice.dto.OrderResponse;
 import com.idalgo.daniel.orderservice.exception.OrderNotFoundException;
+import com.idalgo.daniel.contracts.dto.order.OrderStatus;
+import com.idalgo.daniel.contracts.dto.payment.PaymentDTO;
+import com.idalgo.daniel.contracts.dto.payment.PaymentMethod;
+import com.idalgo.daniel.contracts.dto.payment.PaymentStatus;
+import com.idalgo.daniel.contracts.dto.payment.ProcessPaymentRequest;
+import com.idalgo.daniel.orderservice.client.PaymentClient;
+import com.idalgo.daniel.orderservice.client.PaymentServiceException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,46 +54,118 @@ public class OrderService {
     // Injected configuration
     private final OrderServiceConfig config;
     
+    // Payment client
+    private final PaymentClient paymentClient;
+    
     /**
      * Creates a new order.
      * 
      * Process:
      * 1. Generate unique order ID
      * 2. Create order with PENDING status
-     * 3. Store in memory
-     * 4. Return order response
+     * 3. Call Payment Service
+     * 4. Update status based on payment result
+     * 5. Store in memory
+     * 6. Return order response
      * 
      * @param request Order creation request
      * @return Created order with generated ID
      */
     public OrderResponse createOrder(CreateOrderRequest request) {
         log.debug("Creating order for customer: {}", request.customerId());
-        
-        // Generate unique order ID using configured prefix
+
         String orderId = generateOrderId();
-        
-        // Create order response
-        OrderResponse order = new OrderResponse(
-            orderId,
-            request.customerId(),
-            request.productId(),
-            request.quantity(),
-            request.totalAmount(),
-            "PENDING",
-            LocalDateTime.now()
+
+        // Create initial order with PENDING status
+        OrderResponse pendingOrder = new OrderResponse(
+                orderId,
+                request.customerId(),
+                request.productId(),
+                request.quantity(),
+                request.totalAmount(),
+                OrderStatus.PENDING,    // NUEVO
+                null,                   // No payment ID yet
+                LocalDateTime.now()
         );
-        
-        // Store order
-        orderStore.put(orderId, order);
-        
-        log.info("Order created successfully: {}", orderId);
-        
-        // Log notification status (demonstrates using config)
-        if (config.enableNotifications()) {
-            log.debug("Notification would be sent for order: {}", orderId);
+
+        orderStore.put(orderId, pendingOrder);
+        log.info("Order created with ID: {} in PENDING status", orderId);
+
+        // Process payment
+        try {
+            // Update to PAYMENT_PROCESSING
+            updateOrderStatus(orderId, OrderStatus.PAYMENT_PROCESSING);
+
+            // Call Payment Service
+            ProcessPaymentRequest paymentRequest = new ProcessPaymentRequest(
+                    orderId,
+                    request.totalAmount(),
+                    PaymentMethod.CREDIT_CARD,  // Simplificado por ahora
+                    request.customerId() + "@example.com",  // Email simulado
+                    "4111111111111111"  // Card simulado
+            );
+
+            PaymentDTO payment = paymentClient.processPayment(paymentRequest);
+
+            // Update order based on payment result
+            OrderStatus finalStatus = payment.status() == PaymentStatus.COMPLETED
+                    ? OrderStatus.CONFIRMED
+                    : OrderStatus.PAYMENT_FAILED;
+
+            OrderResponse finalOrder = new OrderResponse(
+                    orderId,
+                    request.customerId(),
+                    request.productId(),
+                    request.quantity(),
+                    request.totalAmount(),
+                    finalStatus,
+                    payment.paymentId(),
+                    pendingOrder.createdAt()
+            );
+
+            orderStore.put(orderId, finalOrder);
+            log.info("Order {} finalized with status: {}", orderId, finalStatus);
+
+            return finalOrder;
+
+        } catch (PaymentServiceException e) {
+            log.error("Payment service failed for order: {}", orderId, e);
+
+            // Update order to PAYMENT_FAILED
+            OrderResponse failedOrder = new OrderResponse(
+                    orderId,
+                    request.customerId(),
+                    request.productId(),
+                    request.quantity(),
+                    request.totalAmount(),
+                    OrderStatus.PAYMENT_FAILED,
+                    null,
+                    pendingOrder.createdAt()
+            );
+
+            orderStore.put(orderId, failedOrder);
+
+            return failedOrder;
         }
-        
-        return order;
+    }
+
+    // Helper method for status update
+    private void updateOrderStatus(String orderId, OrderStatus newStatus) {
+        OrderResponse current = orderStore.get(orderId);
+        if (current != null) {
+            OrderResponse updated = new OrderResponse(
+                    current.orderId(),
+                    current.customerId(),
+                    current.productId(),
+                    current.quantity(),
+                    current.totalAmount(),
+                    newStatus,
+                    current.paymentId(),
+                    current.createdAt()
+            );
+            orderStore.put(orderId, updated);
+            log.debug("Order {} status updated to {}", orderId, newStatus);
+        }
     }
     
     /**

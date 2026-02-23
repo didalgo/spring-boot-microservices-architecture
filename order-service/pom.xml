@@ -21,6 +21,11 @@
     </description>
 
     <dependencies>
+        <dependency>
+            <groupId>com.idalgo.daniel</groupId>
+            <artifactId>contracts</artifactId>
+        </dependency>
+        
         <!-- Project Modules - UPDATED: Added common for GlobalExceptionHandler -->
         <dependency>
             <groupId>com.idalgo.daniel</groupId>

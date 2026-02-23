@@ -1,6 +1,7 @@
 package com.idalgo.daniel.orderservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.idalgo.daniel.contracts.dto.order.OrderStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -35,6 +36,7 @@ import java.time.LocalDateTime;
  * @param quantity Number of units
  * @param totalAmount Total cost
  * @param status Current status of the order
+ * @param paymentId if payment was processed
  * @param createdAt Timestamp when order was created
  */
 public record OrderResponse(
@@ -44,7 +46,8 @@ public record OrderResponse(
     String productId,
     Integer quantity,
     BigDecimal totalAmount,
-    String status,
+    OrderStatus status,
+    String paymentId,
     
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     LocalDateTime createdAt
