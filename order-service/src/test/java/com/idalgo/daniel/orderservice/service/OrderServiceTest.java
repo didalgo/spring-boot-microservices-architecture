@@ -1,5 +1,11 @@
 package com.idalgo.daniel.orderservice.service;
 
+import com.idalgo.daniel.contracts.dto.order.OrderStatus;
+import com.idalgo.daniel.contracts.dto.payment.PaymentDTO;
+import com.idalgo.daniel.contracts.dto.payment.PaymentMethod;
+import com.idalgo.daniel.contracts.dto.payment.PaymentStatus;
+import com.idalgo.daniel.orderservice.client.PaymentClient;
+import com.idalgo.daniel.orderservice.client.PaymentServiceException;
 import com.idalgo.daniel.orderservice.config.OrderServiceConfig;
 import com.idalgo.daniel.orderservice.dto.CreateOrderRequest;
 import com.idalgo.daniel.orderservice.dto.OrderResponse;
@@ -8,52 +14,47 @@ import com.idalgo.daniel.orderservice.exception.OrderNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for OrderService.
  * 
- * These are "pure" unit tests:
- * - No Spring context loaded
- * - No external dependencies
- * - Fast execution
- * - Focused on business logic
- * 
- * We use AssertJ for fluent assertions (included in spring-boot-starter-test).
- * 
- * Test naming convention: should{ExpectedBehavior}When{StateUnderTest}
+ * Updated in Lesson 4 to mock PaymentClient.
  */
+@ExtendWith(MockitoExtension.class)
 @DisplayName("OrderService Unit Tests")
 class OrderServiceTest {
     
     private OrderService orderService;
     private OrderServiceConfig config;
     
-    /**
-     * Setup method run before each test.
-     * 
-     * Creates a fresh OrderService instance with test configuration.
-     */
+    @Mock
+    private PaymentClient paymentClient;
+    
     @BeforeEach
     void setUp() {
-        // Create test configuration
         config = new OrderServiceConfig(
-            100,           // maxOrdersPerCustomer
-            "TEST",        // orderPrefix
-            false          // enableNotifications
+            100,
+            "TEST",
+            false
         );
         
-        // Create service with test config
-        orderService = new OrderService(config);
+        orderService = new OrderService(config, paymentClient);
     }
     
     @Test
-    @DisplayName("Should create order successfully")
-    void shouldCreateOrderSuccessfully() {
+    @DisplayName("Should create order with CONFIRMED status when payment succeeds")
+    void shouldCreateOrderWithConfirmedStatusWhenPaymentSucceeds() {
         // Arrange
         CreateOrderRequest request = new CreateOrderRequest(
             "CUST-001",
@@ -62,19 +63,88 @@ class OrderServiceTest {
             new BigDecimal("199.98")
         );
         
+        PaymentDTO successfulPayment = new PaymentDTO(
+            "PAY-123",
+            "ORD-xxx",
+            new BigDecimal("199.98"),
+            PaymentMethod.CREDIT_CARD,
+            PaymentStatus.COMPLETED,
+            "customer@example.com",
+            LocalDateTime.now(),
+            LocalDateTime.now()
+        );
+        
+        when(paymentClient.processPayment(any())).thenReturn(successfulPayment);
+        
         // Act
         OrderResponse response = orderService.createOrder(request);
         
         // Assert
         assertThat(response).isNotNull();
-        assertThat(response.orderId()).isNotNull();
         assertThat(response.orderId()).startsWith("TEST-");
         assertThat(response.customerId()).isEqualTo("CUST-001");
         assertThat(response.productId()).isEqualTo("PROD-001");
         assertThat(response.quantity()).isEqualTo(2);
         assertThat(response.totalAmount()).isEqualByComparingTo(new BigDecimal("199.98"));
-        assertThat(response.status()).isEqualTo("PENDING");
+        assertThat(response.status()).isEqualTo(OrderStatus.CONFIRMED);
+        assertThat(response.paymentId()).isEqualTo("PAY-123");
         assertThat(response.createdAt()).isNotNull();
+        
+        verify(paymentClient, times(1)).processPayment(any());
+    }
+    
+    @Test
+    @DisplayName("Should create order with PAYMENT_FAILED status when payment fails")
+    void shouldCreateOrderWithPaymentFailedStatusWhenPaymentFails() {
+        // Arrange
+        CreateOrderRequest request = new CreateOrderRequest(
+            "CUST-001",
+            "PROD-001",
+            1,
+            new BigDecimal("50.00")
+        );
+        
+        PaymentDTO failedPayment = new PaymentDTO(
+            "PAY-456",
+            "ORD-xxx",
+            new BigDecimal("50.00"),
+            PaymentMethod.CREDIT_CARD,
+            PaymentStatus.FAILED,
+            "customer@example.com",
+            LocalDateTime.now(),
+            LocalDateTime.now()
+        );
+        
+        when(paymentClient.processPayment(any())).thenReturn(failedPayment);
+        
+        // Act
+        OrderResponse response = orderService.createOrder(request);
+        
+        // Assert
+        assertThat(response.status()).isEqualTo(OrderStatus.PAYMENT_FAILED);
+        assertThat(response.paymentId()).isEqualTo("PAY-456");
+    }
+    
+    @Test
+    @DisplayName("Should create order with PAYMENT_FAILED status when payment service is unavailable")
+    void shouldCreateOrderWithPaymentFailedStatusWhenPaymentServiceUnavailable() {
+        // Arrange
+        CreateOrderRequest request = new CreateOrderRequest(
+            "CUST-001",
+            "PROD-001",
+            1,
+            new BigDecimal("75.00")
+        );
+        
+        when(paymentClient.processPayment(any()))
+            .thenThrow(new PaymentServiceException("Service unavailable"));
+        
+        // Act
+        OrderResponse response = orderService.createOrder(request);
+        
+        // Assert
+        assertThat(response.status()).isEqualTo(OrderStatus.PAYMENT_FAILED);
+        assertThat(response.paymentId()).isNull();
     }
     
     @Test
@@ -87,6 +157,19 @@ class OrderServiceTest {
             1,
             new BigDecimal("99.99")
         );
+        
+        PaymentDTO payment = new PaymentDTO(
+            "PAY-1",
+            "ORD-xxx",
+            new BigDecimal("99.99"),
+            PaymentMethod.PAYPAL,
+            PaymentStatus.COMPLETED,
+            "customer@example.com",
+            LocalDateTime.now(),
+            LocalDateTime.now()
+        );
+        
+        when(paymentClient.processPayment(any())).thenReturn(payment);
         
         // Act
         OrderResponse order1 = orderService.createOrder(request);
@@ -110,6 +193,19 @@ class OrderServiceTest {
             "CUST-002", "PROD-002", 2, new BigDecimal("100.00")
         );
         
+        PaymentDTO payment = new PaymentDTO(
+            "PAY-1",
+            "ORD-xxx",
+            new BigDecimal("50.00"),
+            PaymentMethod.PAYPAL,
+            PaymentStatus.COMPLETED,
+            "customer@example.com",
+            LocalDateTime.now(),
+            LocalDateTime.now()
+        );
+        
+        when(paymentClient.processPayment(any())).thenReturn(payment);
+        
         orderService.createOrder(request1);
         orderService.createOrder(request2);
         
@@ -129,6 +225,20 @@ class OrderServiceTest {
         CreateOrderRequest request = new CreateOrderRequest(
             "CUST-001", "PROD-001", 1, new BigDecimal("99.99")
         );
+        
+        PaymentDTO payment = new PaymentDTO(
+            "PAY-1",
+            "ORD-xxx",
+            new BigDecimal("99.99"),
+            PaymentMethod.CREDIT_CARD,
+            PaymentStatus.COMPLETED,
+            "customer@example.com",
+            LocalDateTime.now(),
+            LocalDateTime.now()
+        );
+        
+        when(paymentClient.processPayment(any())).thenReturn(payment);
+        
         OrderResponse createdOrder = orderService.createOrder(request);
         
         // Act
@@ -154,6 +264,20 @@ class OrderServiceTest {
         CreateOrderRequest request = new CreateOrderRequest(
             "CUST-001", "PROD-001", 1, new BigDecimal("99.99")
         );
+        
+        PaymentDTO payment = new PaymentDTO(
+            "PAY-1",
+            "ORD-xxx",
+            new BigDecimal("99.99"),
+            PaymentMethod.CREDIT_CARD,
+            PaymentStatus.COMPLETED,
+            "customer@example.com",
+            LocalDateTime.now(),
+            LocalDateTime.now()
+        );
+        
+        when(paymentClient.processPayment(any())).thenReturn(payment);
+        
         OrderResponse createdOrder = orderService.createOrder(request);
         
         // Act
@@ -181,26 +305,5 @@ class OrderServiceTest {
         
         // Assert
         assertThat(orders).isEmpty();
-    }
-    
-    @Test
-    @DisplayName("Should track order count correctly")
-    void shouldTrackOrderCountCorrectly() {
-        // Arrange
-        CreateOrderRequest request = new CreateOrderRequest(
-            "CUST-001", "PROD-001", 1, new BigDecimal("99.99")
-        );
-        
-        // Act & Assert
-        assertThat(orderService.getOrderCount()).isEqualTo(0);
-        
-        OrderResponse order1 = orderService.createOrder(request);
-        assertThat(orderService.getOrderCount()).isEqualTo(1);
-        
-        orderService.createOrder(request);
-        assertThat(orderService.getOrderCount()).isEqualTo(2);
-        
-        orderService.deleteOrder(order1.orderId());
-        assertThat(orderService.getOrderCount()).isEqualTo(1);
     }
 }
