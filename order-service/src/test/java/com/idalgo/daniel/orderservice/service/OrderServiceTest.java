@@ -4,6 +4,7 @@ import com.idalgo.daniel.contracts.dto.order.OrderStatus;
 import com.idalgo.daniel.contracts.dto.payment.PaymentDTO;
 import com.idalgo.daniel.contracts.dto.payment.PaymentMethod;
 import com.idalgo.daniel.contracts.dto.payment.PaymentStatus;
+import com.idalgo.daniel.contracts.events.OrderConfirmedEvent;
 import com.idalgo.daniel.orderservice.client.PaymentClient;
 import com.idalgo.daniel.orderservice.client.PaymentServiceException;
 import com.idalgo.daniel.orderservice.config.OrderServiceConfig;
@@ -17,68 +18,82 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.SendResult;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for OrderService.
- * 
- * Updated in Lesson 4 to mock PaymentClient.
+ *
+ * Updated in Lesson 5 to mock KafkaTemplate.
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("OrderService Unit Tests")
 class OrderServiceTest {
-    
+
     private OrderService orderService;
     private OrderServiceConfig config;
-    
+
     @Mock
     private PaymentClient paymentClient;
-    
+
+    @Mock(lenient = true)
+    private KafkaTemplate<String, OrderConfirmedEvent> kafkaTemplate;
+
     @BeforeEach
     void setUp() {
         config = new OrderServiceConfig(
-            100,
-            "TEST",
-            false
+                100,
+                "TEST",
+                false
         );
-        
-        orderService = new OrderService(config, paymentClient);
+
+        // Mock KafkaTemplate.send() to return completed future
+        CompletableFuture<SendResult<String, OrderConfirmedEvent>> future =
+                CompletableFuture.completedFuture(null);
+        lenient().when(kafkaTemplate.send(anyString(), anyString(), any(OrderConfirmedEvent.class)))
+                .thenReturn(future);
+
+        orderService = new OrderService(config, paymentClient, kafkaTemplate);
     }
-    
+
     @Test
-    @DisplayName("Should create order with CONFIRMED status when payment succeeds")
-    void shouldCreateOrderWithConfirmedStatusWhenPaymentSucceeds() {
+    @DisplayName("Should create order with CONFIRMED status and publish event when payment succeeds")
+    void shouldCreateOrderWithConfirmedStatusAndPublishEventWhenPaymentSucceeds() {
         // Arrange
         CreateOrderRequest request = new CreateOrderRequest(
-            "CUST-001",
-            "PROD-001",
-            2,
-            new BigDecimal("199.98")
+                "CUST-001",
+                "PROD-001",
+                2,
+                new BigDecimal("199.98")
         );
-        
+
         PaymentDTO successfulPayment = new PaymentDTO(
-            "PAY-123",
-            "ORD-xxx",
-            new BigDecimal("199.98"),
-            PaymentMethod.CREDIT_CARD,
-            PaymentStatus.COMPLETED,
-            "customer@example.com",
-            LocalDateTime.now(),
-            LocalDateTime.now()
+                "PAY-123",
+                "ORD-xxx",
+                new BigDecimal("199.98"),
+                PaymentMethod.CREDIT_CARD,
+                PaymentStatus.COMPLETED,
+                "customer@example.com",
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
-        
+
         when(paymentClient.processPayment(any())).thenReturn(successfulPayment);
-        
+
         // Act
         OrderResponse response = orderService.createOrder(request);
-        
+
         // Assert
         assertThat(response).isNotNull();
         assertThat(response.orderId()).startsWith("TEST-");
@@ -89,220 +104,234 @@ class OrderServiceTest {
         assertThat(response.status()).isEqualTo(OrderStatus.CONFIRMED);
         assertThat(response.paymentId()).isEqualTo("PAY-123");
         assertThat(response.createdAt()).isNotNull();
-        
+
+        // Verify payment was processed
         verify(paymentClient, times(1)).processPayment(any());
+
+        // Verify event was published
+        verify(kafkaTemplate, times(1)).send(
+                eq("order-events"),
+                eq(response.orderId()),
+                any(OrderConfirmedEvent.class)
+        );
     }
-    
+
     @Test
-    @DisplayName("Should create order with PAYMENT_FAILED status when payment fails")
-    void shouldCreateOrderWithPaymentFailedStatusWhenPaymentFails() {
+    @DisplayName("Should create order with PAYMENT_FAILED status and NOT publish event when payment fails")
+    void shouldCreateOrderWithPaymentFailedStatusAndNotPublishEventWhenPaymentFails() {
         // Arrange
         CreateOrderRequest request = new CreateOrderRequest(
-            "CUST-001",
-            "PROD-001",
-            1,
-            new BigDecimal("50.00")
+                "CUST-001",
+                "PROD-001",
+                1,
+                new BigDecimal("50.00")
         );
-        
+
         PaymentDTO failedPayment = new PaymentDTO(
-            "PAY-456",
-            "ORD-xxx",
-            new BigDecimal("50.00"),
-            PaymentMethod.CREDIT_CARD,
-            PaymentStatus.FAILED,
-            "customer@example.com",
-            LocalDateTime.now(),
-            LocalDateTime.now()
+                "PAY-456",
+                "ORD-xxx",
+                new BigDecimal("50.00"),
+                PaymentMethod.CREDIT_CARD,
+                PaymentStatus.FAILED,
+                "customer@example.com",
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
-        
+
         when(paymentClient.processPayment(any())).thenReturn(failedPayment);
-        
+
         // Act
         OrderResponse response = orderService.createOrder(request);
-        
+
         // Assert
         assertThat(response.status()).isEqualTo(OrderStatus.PAYMENT_FAILED);
         assertThat(response.paymentId()).isEqualTo("PAY-456");
+
+        // Verify event was NOT published (only published for CONFIRMED orders)
+        verify(kafkaTemplate, never()).send(anyString(), anyString(), any());
     }
-    
+
     @Test
-    @DisplayName("Should create order with PAYMENT_FAILED status when payment service is unavailable")
-    void shouldCreateOrderWithPaymentFailedStatusWhenPaymentServiceUnavailable() {
+    @DisplayName("Should create order with PAYMENT_FAILED status and NOT publish event when payment service unavailable")
+    void shouldCreateOrderWithPaymentFailedStatusAndNotPublishEventWhenPaymentServiceUnavailable() {
         // Arrange
         CreateOrderRequest request = new CreateOrderRequest(
-            "CUST-001",
-            "PROD-001",
-            1,
-            new BigDecimal("75.00")
+                "CUST-001",
+                "PROD-001",
+                1,
+                new BigDecimal("75.00")
         );
-        
+
         when(paymentClient.processPayment(any()))
-            .thenThrow(new PaymentServiceException("Service unavailable"));
-        
+                .thenThrow(new PaymentServiceException("Service unavailable"));
+
         // Act
         OrderResponse response = orderService.createOrder(request);
-        
+
         // Assert
         assertThat(response.status()).isEqualTo(OrderStatus.PAYMENT_FAILED);
         assertThat(response.paymentId()).isNull();
+
+        // Verify event was NOT published
+        verify(kafkaTemplate, never()).send(anyString(), anyString(), any());
     }
-    
+
     @Test
     @DisplayName("Should generate unique order IDs")
     void shouldGenerateUniqueOrderIds() {
         // Arrange
         CreateOrderRequest request = new CreateOrderRequest(
-            "CUST-001",
-            "PROD-001",
-            1,
-            new BigDecimal("99.99")
+                "CUST-001",
+                "PROD-001",
+                1,
+                new BigDecimal("99.99")
         );
-        
+
         PaymentDTO payment = new PaymentDTO(
-            "PAY-1",
-            "ORD-xxx",
-            new BigDecimal("99.99"),
-            PaymentMethod.PAYPAL,
-            PaymentStatus.COMPLETED,
-            "customer@example.com",
-            LocalDateTime.now(),
-            LocalDateTime.now()
+                "PAY-1",
+                "ORD-xxx",
+                new BigDecimal("99.99"),
+                PaymentMethod.PAYPAL,
+                PaymentStatus.COMPLETED,
+                "customer@example.com",
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
-        
+
         when(paymentClient.processPayment(any())).thenReturn(payment);
-        
+
         // Act
         OrderResponse order1 = orderService.createOrder(request);
         OrderResponse order2 = orderService.createOrder(request);
         OrderResponse order3 = orderService.createOrder(request);
-        
+
         // Assert
         assertThat(order1.orderId()).isNotEqualTo(order2.orderId());
         assertThat(order2.orderId()).isNotEqualTo(order3.orderId());
         assertThat(order1.orderId()).isNotEqualTo(order3.orderId());
     }
-    
+
     @Test
     @DisplayName("Should retrieve all orders")
     void shouldRetrieveAllOrders() {
         // Arrange
         CreateOrderRequest request1 = new CreateOrderRequest(
-            "CUST-001", "PROD-001", 1, new BigDecimal("50.00")
+                "CUST-001", "PROD-001", 1, new BigDecimal("50.00")
         );
         CreateOrderRequest request2 = new CreateOrderRequest(
-            "CUST-002", "PROD-002", 2, new BigDecimal("100.00")
+                "CUST-002", "PROD-002", 2, new BigDecimal("100.00")
         );
-        
+
         PaymentDTO payment = new PaymentDTO(
-            "PAY-1",
-            "ORD-xxx",
-            new BigDecimal("50.00"),
-            PaymentMethod.PAYPAL,
-            PaymentStatus.COMPLETED,
-            "customer@example.com",
-            LocalDateTime.now(),
-            LocalDateTime.now()
+                "PAY-1",
+                "ORD-xxx",
+                new BigDecimal("50.00"),
+                PaymentMethod.PAYPAL,
+                PaymentStatus.COMPLETED,
+                "customer@example.com",
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
-        
+
         when(paymentClient.processPayment(any())).thenReturn(payment);
-        
+
         orderService.createOrder(request1);
         orderService.createOrder(request2);
-        
+
         // Act
         List<OrderResponse> orders = orderService.getAllOrders();
-        
+
         // Assert
         assertThat(orders).hasSize(2);
         assertThat(orders).extracting(OrderResponse::customerId)
-            .containsExactlyInAnyOrder("CUST-001", "CUST-002");
+                .containsExactlyInAnyOrder("CUST-001", "CUST-002");
     }
-    
+
     @Test
     @DisplayName("Should retrieve order by ID")
     void shouldRetrieveOrderById() {
         // Arrange
         CreateOrderRequest request = new CreateOrderRequest(
-            "CUST-001", "PROD-001", 1, new BigDecimal("99.99")
+                "CUST-001", "PROD-001", 1, new BigDecimal("99.99")
         );
-        
+
         PaymentDTO payment = new PaymentDTO(
-            "PAY-1",
-            "ORD-xxx",
-            new BigDecimal("99.99"),
-            PaymentMethod.CREDIT_CARD,
-            PaymentStatus.COMPLETED,
-            "customer@example.com",
-            LocalDateTime.now(),
-            LocalDateTime.now()
+                "PAY-1",
+                "ORD-xxx",
+                new BigDecimal("99.99"),
+                PaymentMethod.CREDIT_CARD,
+                PaymentStatus.COMPLETED,
+                "customer@example.com",
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
-        
+
         when(paymentClient.processPayment(any())).thenReturn(payment);
-        
+
         OrderResponse createdOrder = orderService.createOrder(request);
-        
+
         // Act
         OrderResponse retrievedOrder = orderService.getOrderById(createdOrder.orderId());
-        
+
         // Assert
         assertThat(retrievedOrder).isEqualTo(createdOrder);
     }
-    
+
     @Test
     @DisplayName("Should throw exception when order not found")
     void shouldThrowExceptionWhenOrderNotFound() {
         // Act & Assert
         assertThatThrownBy(() -> orderService.getOrderById("NON-EXISTENT"))
-            .isInstanceOf(OrderNotFoundException.class)
-            .hasMessageContaining("NON-EXISTENT");
+                .isInstanceOf(OrderNotFoundException.class)
+                .hasMessageContaining("NON-EXISTENT");
     }
-    
+
     @Test
     @DisplayName("Should delete order successfully")
     void shouldDeleteOrderSuccessfully() {
         // Arrange
         CreateOrderRequest request = new CreateOrderRequest(
-            "CUST-001", "PROD-001", 1, new BigDecimal("99.99")
+                "CUST-001", "PROD-001", 1, new BigDecimal("99.99")
         );
-        
+
         PaymentDTO payment = new PaymentDTO(
-            "PAY-1",
-            "ORD-xxx",
-            new BigDecimal("99.99"),
-            PaymentMethod.CREDIT_CARD,
-            PaymentStatus.COMPLETED,
-            "customer@example.com",
-            LocalDateTime.now(),
-            LocalDateTime.now()
+                "PAY-1",
+                "ORD-xxx",
+                new BigDecimal("99.99"),
+                PaymentMethod.CREDIT_CARD,
+                PaymentStatus.COMPLETED,
+                "customer@example.com",
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
-        
+
         when(paymentClient.processPayment(any())).thenReturn(payment);
-        
+
         OrderResponse createdOrder = orderService.createOrder(request);
-        
+
         // Act
         orderService.deleteOrder(createdOrder.orderId());
-        
+
         // Assert
         assertThatThrownBy(() -> orderService.getOrderById(createdOrder.orderId()))
-            .isInstanceOf(OrderNotFoundException.class);
+                .isInstanceOf(OrderNotFoundException.class);
     }
-    
+
     @Test
     @DisplayName("Should throw exception when deleting non-existent order")
     void shouldThrowExceptionWhenDeletingNonExistentOrder() {
         // Act & Assert
         assertThatThrownBy(() -> orderService.deleteOrder("NON-EXISTENT"))
-            .isInstanceOf(OrderNotFoundException.class)
-            .hasMessageContaining("NON-EXISTENT");
+                .isInstanceOf(OrderNotFoundException.class)
+                .hasMessageContaining("NON-EXISTENT");
     }
-    
+
     @Test
     @DisplayName("Should return empty list when no orders exist")
     void shouldReturnEmptyListWhenNoOrdersExist() {
         // Act
         List<OrderResponse> orders = orderService.getAllOrders();
-        
+
         // Assert
         assertThat(orders).isEmpty();
     }

@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: notification-service
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      enable-auto-commit: true
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.idalgo.daniel.contracts.events.OrderConfirmedEvent
+
+server:
+  port: 8083
+
+logging:
+  level:
+    root: INFO
+    com.idalgo.daniel.notificationservice: DEBUG
+    org.apache.kafka: WARN

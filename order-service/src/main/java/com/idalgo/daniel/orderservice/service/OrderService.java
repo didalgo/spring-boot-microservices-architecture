@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import com.idalgo.daniel.contracts.events.OrderConfirmedEvent;
+import org.springframework.kafka.core.KafkaTemplate;
 
 /**
  * Service layer for order business logic.
@@ -56,6 +58,8 @@ public class OrderService {
     
     // Payment client
     private final PaymentClient paymentClient;
+
+    private final KafkaTemplate<String, OrderConfirmedEvent> kafkaTemplate; 
     
     /**
      * Creates a new order.
@@ -126,6 +130,10 @@ public class OrderService {
             orderStore.put(orderId, finalOrder);
             log.info("Order {} finalized with status: {}", orderId, finalStatus);
 
+            if (finalStatus == OrderStatus.CONFIRMED) {
+                publishOrderConfirmedEvent(finalOrder);
+            }
+            
             return finalOrder;
 
         } catch (PaymentServiceException e) {
@@ -244,4 +252,27 @@ public class OrderService {
     public int getOrderCount() {
         return orderStore.size();
     }
+
+    /**
+     * Publishes OrderConfirmedEvent to Kafka.
+     */
+    private void publishOrderConfirmedEvent(OrderResponse order) {
+        OrderConfirmedEvent event = OrderConfirmedEvent.create(
+                order.orderId(),
+                order.customerId(),
+                order.totalAmount(),
+                order.paymentId()
+        );
+
+        log.info("Publishing OrderConfirmedEvent for order: {}", order.orderId());
+
+        kafkaTemplate.send("order-events", order.orderId(), event)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        log.info("Event published successfully: {}", event.eventId());
+                    } else {
+                        log.error("Failed to publish event", ex);
+                    }
+                });
+    } 
 }
