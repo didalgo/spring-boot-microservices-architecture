@@ -11,44 +11,26 @@
         <version>0.6.0</version>
     </parent>
 
-    <artifactId>notification-service</artifactId>
+    <artifactId>api-gateway</artifactId>
     <packaging>jar</packaging>
 
-    <name>Notification Service</name>
+    <name>API Gateway</name>
     <description>
-        Microservice for sending notifications based on domain events.
+        API Gateway using Spring Cloud Gateway.
+        Single entry point for all microservices.
     </description>
 
+    <properties>
+        <spring-cloud.version>2023.0.0</spring-cloud.version>
+    </properties>
+
     <dependencies>
-        <!-- Contracts (for events) -->
+        <!-- Spring Cloud Gateway -->
         <dependency>
-            <groupId>com.idalgo.daniel</groupId>
-            <artifactId>contracts</artifactId>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-gateway</artifactId>
         </dependency>
 
-        <!-- Spring Boot Starter -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-        </dependency>
-
-        <!-- Spring Kafka -->
-        <dependency>
-            <groupId>org.springframework.kafka</groupId>
-            <artifactId>spring-kafka</artifactId>
-        </dependency>
-        
-        <!-- Jackson (REQUIRED for Kafka JSON deserialization) -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-jsr310</artifactId>
-        </dependency>
-        
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -63,6 +45,18 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <plugins>
