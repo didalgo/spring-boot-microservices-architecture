@@ -8,7 +8,7 @@
     <parent>
         <groupId>com.idalgo.daniel</groupId>
         <artifactId>spring-boot-microservices-architecture</artifactId>
-        <version>0.6.0</version>
+        <version>0.7.0</version>
     </parent>
 
     <artifactId>api-gateway</artifactId>
@@ -31,6 +31,18 @@
             <artifactId>spring-cloud-starter-gateway</artifactId>
         </dependency>
 
+        <!-- Resilience4j Circuit Breaker -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-circuitbreaker-reactor-resilience4j</artifactId>
+        </dependency>
+
+        <!-- Actuator for metrics -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
