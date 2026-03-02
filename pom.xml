@@ -7,7 +7,7 @@
 
     <groupId>com.idalgo.daniel</groupId>
     <artifactId>spring-boot-microservices-architecture</artifactId>
-    <version>0.6.0</version>
+    <version>0.7.0</version>
     <packaging>pom</packaging>
 
     <name>Spring Boot Microservices Architecture</name>
