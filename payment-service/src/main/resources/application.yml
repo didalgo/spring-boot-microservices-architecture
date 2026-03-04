@@ -18,7 +18,8 @@ logging:
     com.idalgo.daniel.paymentservice: DEBUG
     com.idalgo.daniel.common: DEBUG
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+    
 # Eureka Client Configuration
 eureka:
   client:
@@ -30,3 +31,13 @@ eureka:
     preferIpAddress: true
     leaseRenewalIntervalInSeconds: 30
     leaseExpirationDurationInSeconds: 90
+
+# Distributed Tracing
+management:
+  tracing:
+    sampling:
+      probability: 1.0  # 100% for development
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
+

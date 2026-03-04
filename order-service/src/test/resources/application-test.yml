@@ -13,3 +13,19 @@ logging:
   level:
     root: WARN
     com.idalgo.daniel.orderservice: INFO
+
+# Disable Eureka in tests
+eureka:
+  client:
+    enabled: false
+
+# Disable Zipkin in tests
+management:
+  tracing:
+    enabled: false
+  zipkin:
+    tracing:
+      enabled: false
+
+payment-service:
+  name: payment-service
