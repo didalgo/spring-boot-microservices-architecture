@@ -115,7 +115,8 @@ logging:
     org.springframework.cloud.gateway: INFO
     org.springframework.web: INFO
     io.github.resilience4j: DEBUG
-
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
 # Management Endpoints
 management:
   endpoints:
@@ -132,3 +133,9 @@ management:
     distribution:
       percentiles-histogram:
         resilience4j.circuitbreaker.calls: true
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
