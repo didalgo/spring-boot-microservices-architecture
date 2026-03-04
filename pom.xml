@@ -7,7 +7,7 @@
 
     <groupId>com.idalgo.daniel</groupId>
     <artifactId>spring-boot-microservices-architecture</artifactId>
-    <version>0.7.0</version>
+    <version>0.8.0</version>
     <packaging>pom</packaging>
 
     <name>Spring Boot Microservices Architecture</name>
@@ -23,6 +23,7 @@
         <module>payment-service</module>
         <module>notification-service</module>
         <module>api-gateway</module>
+        <module>eureka-server</module>
     </modules>
 
     <properties>

@@ -26,4 +26,16 @@ logging:
 
 # Payment Service Configuration
 payment-service:
-  url: http://localhost:8082
+  name: payment-service
+
+# Eureka Client Configuration
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+    registerWithEureka: true
+    fetchRegistry: true
+  instance:
+    preferIpAddress: true
+    leaseRenewalIntervalInSeconds: 30
+    leaseExpirationDurationInSeconds: 90
