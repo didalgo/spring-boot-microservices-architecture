@@ -2,6 +2,7 @@ package com.idalgo.daniel.orderservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.idalgo.daniel.contracts.dto.order.OrderStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -39,16 +40,60 @@ import java.time.LocalDateTime;
  * @param paymentId if payment was processed
  * @param createdAt Timestamp when order was created
  */
+@Schema(description = "Order response with complete order details")
 public record OrderResponse(
-    
+
+    @Schema(
+            description = "Unique order identifier",
+            example = "ORD-1677849600-1"
+    )        
     String orderId,
+
+    @Schema(
+            description = "Customer unique identifier",
+            example = "CUST-001"
+    )
     String customerId,
+
+    @Schema(
+            description = "Product unique identifier",
+            example = "PROD-001"
+    )
     String productId,
+
+    @Schema(
+            description = "Quantity of products ordered",
+            example = "2",
+            minimum = "1"
+    )
     Integer quantity,
+
+    @Schema(
+            description = "Total amount in USD",
+            example = "199.99"
+    )
     BigDecimal totalAmount,
+
+    @Schema(
+            description = "Current order status",
+            example = "CONFIRMED",
+            allowableValues = {"PENDING", "CONFIRMED", "PAYMENT_FAILED", "CANCELLED"}
+    )
     OrderStatus status,
-    String paymentId,
     
+    @Schema(
+            description = "Payment transaction unique identifier returned by payment service",
+            example = "PAY-1677849601-1",
+            nullable = true
+    )
+    String paymentId,
+
+    @Schema(
+            description = "Order creation timestamp",
+            example = "2024-03-05T10:30:00",
+            type = "string",
+            format = "date-time"
+    )
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     LocalDateTime createdAt
 ) {

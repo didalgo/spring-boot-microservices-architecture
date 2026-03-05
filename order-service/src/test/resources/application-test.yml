@@ -1,6 +1,8 @@
 spring:
   application:
     name: order-service-test
+  kafka:
+    bootstrap-servers: localhost:9092
 
 # Test-specific configuration
 order-service:
