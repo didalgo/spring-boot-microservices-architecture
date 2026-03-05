@@ -1,5 +1,6 @@
 package com.idalgo.daniel.orderservice.controller;
 
+import com.idalgo.daniel.orderservice.config.DynamicConfig;
 import com.idalgo.daniel.orderservice.dto.CreateOrderRequest;
 import com.idalgo.daniel.orderservice.dto.OrderResponse;
 import com.idalgo.daniel.orderservice.service.OrderService;
@@ -9,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -144,4 +146,13 @@ public class OrderController {
         
         return ResponseEntity.noContent().build();
     }
+
+    @Autowired
+    private DynamicConfig dynamicConfig;
+
+    @GetMapping("/test-config")
+    public ResponseEntity<String> testConfig() {
+        return ResponseEntity.ok(dynamicConfig.getMessage());
+    }
+
 }

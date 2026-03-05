@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -11,45 +11,35 @@
         <version>0.10.0</version>
     </parent>
 
-    <artifactId>eureka-server</artifactId>
+    <artifactId>config-server</artifactId>
     <packaging>jar</packaging>
 
-    <name>Eureka Server</name>
+    <name>Config Server</name>
     <description>
-        Netflix Eureka Service Discovery Server.
-        Central registry for all microservices.
+        Centralized configuration server using Spring Cloud Config.
+        Provides configuration for all microservices from a Git repository.
     </description>
 
-    <properties>
-        <spring-cloud.version>2023.0.0</spring-cloud.version>
-    </properties>
-
     <dependencies>
-        <!-- Eureka Server -->
+        <!-- Spring Cloud Config Server -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
+            <artifactId>spring-cloud-config-server</artifactId>
         </dependency>
 
-        <!-- Test -->
+        <!-- Spring Boot Actuator -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring-cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
     <build>
         <plugins>
@@ -59,5 +49,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>
