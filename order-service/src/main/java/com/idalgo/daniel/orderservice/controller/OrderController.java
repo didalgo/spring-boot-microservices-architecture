@@ -6,6 +6,7 @@ import com.idalgo.daniel.orderservice.dto.OrderResponse;
 import com.idalgo.daniel.orderservice.service.OrderService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -16,9 +17,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -96,7 +99,10 @@ public class OrderController {
     })    
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody CreateOrderRequest request) {
-        log.info("Received request to create order for customer: {}", request.customerId());
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = (auth != null && auth.isAuthenticated()) ? auth.getName() : "anonymous";
+
+        log.info("User {} creating order for customer: {}", username, request.customerId());
         
         OrderResponse createdOrder = orderService.createOrder(request);
         
@@ -117,10 +123,9 @@ public class OrderController {
      * 
      * @return List of all orders
      */
-
     @Operation(
-            summary = "Get all orders",
-            description = "Retrieves a list of all orders in the system"
+            summary = "Get all orders (Admin only)",
+            description = "Retrieves all orders in the system. Admin access required."
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -132,16 +137,39 @@ public class OrderController {
                     )
             )
     })
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     @GetMapping
     public ResponseEntity<List<OrderResponse>> getAllOrders() {
-        log.info("Received request to list all orders");
-        
+        log.info("Admin retrieving all orders");
         List<OrderResponse> orders = orderService.getAllOrders();
-        
         log.debug("Returning {} orders", orders.size());
-        
         return ResponseEntity.ok(orders);
     }
+
+    /**
+     * Retrieves my orders.
+     *
+     * HTTP GET /api/my-orders
+     *
+     * Response: List of OrderResponse with 200 OK
+     *
+     * @return List of my orders
+     */
+    @Operation(
+            summary = "Get my orders",
+            description = "Retrieves orders for the authenticated user"
+    )
+    @GetMapping("/my-orders")
+    public ResponseEntity<List<OrderResponse>> getMyOrders() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        log.info("User {} retrieving their orders", username);
+
+        // TODO: Filter orders by username
+        List<OrderResponse> orders = orderService.getAllOrders();
+        return ResponseEntity.ok(orders);
+    }   
     
     /**
      * Retrieves a specific order by ID.
@@ -177,11 +205,15 @@ public class OrderController {
             )
     })    
     @GetMapping("/{orderId}")
-    public ResponseEntity<OrderResponse> getOrderById(@PathVariable String orderId) {
+    public ResponseEntity<OrderResponse> getOrderById(
+            @Parameter(
+                    description = "Order ID in format ORD-{timestamp}-{sequence}",
+                    example = "ORD-1677849600-1",
+                    required = true
+            )
+            @PathVariable String orderId) {
         log.info("Received request to get order: {}", orderId);
-        
         OrderResponse order = orderService.getOrderById(orderId);
-        
         return ResponseEntity.ok(order);
     }
     
@@ -202,8 +234,8 @@ public class OrderController {
      * @return Empty response with 204
      */
     @Operation(
-            summary = "Delete an order",
-            description = "Deletes an order from the system. This is a permanent operation."
+            summary = "Delete an order (Admin only)",
+            description = "Deletes an order. Admin access required."
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -214,13 +246,18 @@ public class OrderController {
                     responseCode = "404",
                     description = "Order not found"
             )
-    })    
+    })
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     @DeleteMapping("/{orderId}")
-    public ResponseEntity<Void> deleteOrder(@PathVariable String orderId) {
-        log.info("Received request to delete order: {}", orderId);
-        
+    public ResponseEntity<Void> deleteOrder(
+            @Parameter(
+                    description = "Order ID to delete",
+                    example = "ORD-1677849600-1",
+                    required = true
+            )
+            @PathVariable String orderId) {
+        log.info("Admin deleting order: {}", orderId);
         orderService.deleteOrder(orderId);
-        
         return ResponseEntity.noContent().build();
     }
 

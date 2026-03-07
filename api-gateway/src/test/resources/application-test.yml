@@ -1,0 +1,4 @@
+# JWT Configuration
+jwt:
+  secret: testSecretKeyForJWTTokenGenerationAndValidation1234567890
+  expiration: 3600000

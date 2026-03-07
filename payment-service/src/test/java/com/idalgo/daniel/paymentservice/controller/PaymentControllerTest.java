@@ -9,9 +9,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -31,7 +35,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * GlobalExceptionHandler integration will be tested with full
  * @SpringBootTest in integration test suites.
  */
-@WebMvcTest(PaymentController.class)
+@WebMvcTest(
+        controllers = PaymentController.class,
+        excludeFilters = @ComponentScan.Filter(
+                type = FilterType.ASSIGNABLE_TYPE,
+                classes = {
+                        com.idalgo.daniel.paymentservice.security.SecurityConfig.class,
+                        com.idalgo.daniel.paymentservice.security.JwtAuthenticationFilter.class,
+                        com.idalgo.daniel.paymentservice.security.JwtUtil.class,
+                        com.idalgo.daniel.paymentservice.config.CorsConfig.class
+                }
+        )
+)
+@AutoConfigureMockMvc(addFilters = false)
+@ActiveProfiles("test")
 @DisplayName("PaymentController Integration Tests")
 class PaymentControllerTest {
     

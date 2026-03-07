@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: auth-service-test
+  
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  
+  # Disable Eureka in tests
+  cloud:
+    discovery:
+      enabled: false
+
+eureka:
+  client:
+    enabled: false
+
+# JWT Configuration for tests
+jwt:
+  secret: testSecretKeyForJWTTokenGenerationAndValidation1234567890
+  expiration: 3600000
+  refresh-expiration: 604800000

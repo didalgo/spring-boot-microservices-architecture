@@ -1,27 +1,14 @@
 spring:
   application:
     name: order-service-test
+  
   kafka:
     bootstrap-servers: localhost:9092
 
-# Test-specific configuration
-order-service:
-  max-orders-per-customer: 50
-  order-prefix: "TEST"
-  enable-notifications: false
-
-# Disable unnecessary logging in tests
-logging:
-  level:
-    root: WARN
-    com.idalgo.daniel.orderservice: INFO
-
-# Disable Eureka in tests
 eureka:
   client:
     enabled: false
 
-# Disable Zipkin in tests
 management:
   tracing:
     enabled: false
@@ -31,3 +18,13 @@ management:
 
 payment-service:
   name: payment-service
+
+# JWT Configuration
+jwt:
+  secret: testSecretKeyForJWTTokenGenerationAndValidation1234567890
+  expiration: 3600000
+
+# Order Service Configuration
+order-service:
+  orderPrefix: TEST
+  maxOrdersPerCustomer: 100
