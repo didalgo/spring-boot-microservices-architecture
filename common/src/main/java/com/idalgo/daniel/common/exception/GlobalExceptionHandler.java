@@ -13,6 +13,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -153,5 +155,24 @@ public class GlobalExceptionHandler {
             rejectedValue,
             fieldError.getDefaultMessage()
         );
+    }
+
+    /**
+     * Handle Access Denied (403 Forbidden)
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(
+            AccessDeniedException ex,
+            WebRequest request
+    ) {
+        log.warn("Access denied: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                "FORBIDDEN",
+                "You don't have permission to access this resource",
+                request.getDescription(false).replace("uri=", "")
+        );
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
     }
 }

@@ -11,9 +11,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -30,7 +34,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 
  * Updated in Lesson 4 to use new OrderResponse with status and paymentId.
  */
-@WebMvcTest(OrderController.class)
+@WebMvcTest(
+        controllers = OrderController.class,
+        excludeFilters = @ComponentScan.Filter(
+                type = FilterType.ASSIGNABLE_TYPE,
+                classes = {
+                        com.idalgo.daniel.orderservice.security.SecurityConfig.class,
+                        com.idalgo.daniel.orderservice.security.JwtAuthenticationFilter.class,
+                        com.idalgo.daniel.orderservice.security.JwtUtil.class,
+                        com.idalgo.daniel.orderservice.config.CorsConfig.class
+                }
+        )
+)
+@AutoConfigureMockMvc(addFilters = false)
+@ActiveProfiles("test")
 @DisplayName("OrderController Integration Tests")
 class OrderControllerTest {
     
