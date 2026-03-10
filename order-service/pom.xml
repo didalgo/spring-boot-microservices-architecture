@@ -8,7 +8,7 @@
     <parent>
         <groupId>com.idalgo.daniel</groupId>
         <artifactId>spring-boot-microservices-architecture</artifactId>
-        <version>0.12.0</version>
+        <version>0.13.0</version>
     </parent>
 
     <artifactId>order-service</artifactId>
@@ -143,6 +143,12 @@
             <version>0.11.5</version>
             <scope>runtime</scope>
         </dependency>
+
+        <!-- Monitoring -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>        
     </dependencies>
     
     <dependencyManagement>

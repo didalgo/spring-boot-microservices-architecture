@@ -9,7 +9,7 @@ spring:
     config:
       server:
         git:
-          uri: file:///${CONFIG_REPO_PATH:C:/Users/didal/git/microservices-config}
+          uri: file:///${CONFIG_REPO_PATH}
           default-label: main
           clone-on-start: true
 
@@ -18,11 +18,14 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus,metrics
   endpoint:
     health:
       show-details: always
-
+  prometheus:
+    metrics:
+      export:
+        enabled: true
 # Logging
 logging:
   level:
