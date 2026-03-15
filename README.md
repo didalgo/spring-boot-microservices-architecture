@@ -275,6 +275,12 @@ Copy `.env.example` to `.env` and configure:
 
 ---
 
+## Related Repositories
+
+- [microservices-config](https://github.com/didalgo/microservices-config) — Centralized configuration repository served by Spring Cloud Config Server. Contains environment-specific YAML files for all services across `docker` and `kubernetes` profiles.
+
+---
+
 ## License
 
 MIT
