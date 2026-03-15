@@ -44,7 +44,7 @@ public class OpenAPIConfig {
                                 .url("http://localhost:8081")
                                 .description("Development server"),
                         new Server()
-                                .url("http://localhost:8080/api/orders")
+                                .url("http://localhost:8080")
                                 .description("API Gateway")
                 ))
                 .components(new Components()

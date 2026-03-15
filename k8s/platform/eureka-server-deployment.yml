@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eureka-server
+  namespace: microservices
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eureka-server
+  template:
+    metadata:
+      labels:
+        app: eureka-server
+    spec:
+      initContainers:
+        - name: wait-for-config-server
+          image: busybox
+          command:
+            - sh
+            - -c
+            - |
+              until wget -q -O- http://config-server:8888/actuator/health | grep -q '"status":"UP"'; do
+                echo "Waiting for Config Server..."
+                sleep 5
+              done
+              echo "Config Server is ready"
+      containers:
+        - name: eureka-server
+          image: eureka-server:0.13.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8761
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: SPRING_CLOUD_CONFIG_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: microservices-config
+                  key: CONFIG_SERVER_URL
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8761
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8761
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8761
+            initialDelaySeconds: 90
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

@@ -84,3 +84,4 @@ application-secrets.yml
 application-secrets.properties
 *-secrets.yml
 *-secrets.properties
+k8s/secrets.yml
